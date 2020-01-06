@@ -1,0 +1,43 @@
+server:
+  port: 5002 #端口
+spring:
+  application:
+    name: gateway5002 #服务名称
+  redis:
+    host: 192.168.179.128
+    port: 6379
+    database: 0
+  cloud: #配置SpringCloudGateway的路由
+    gateway:
+      routes:
+      - id: product-service
+        uri: lb://products-server
+        predicates:
+        - Path=/product-service/**
+        filters:
+        - name: RequestRateLimiter
+          args:
+            # 使用SpEL从容器中获取对象
+            #key-resolver: '#{@pathKeyResolver}'
+            key-resolver: '#{@parmKeyResolver}'
+            # 令牌桶每秒填充平均速率
+            redis-rate-limiter.replenishRate: 1
+            # 令牌桶的上限
+            redis-rate-limiter.burstCapacity: 3
+        - RewritePath=/product-service/(?<segment>.*), /$\{segment}
+      discovery:  #配置自动的根据微服务名称进行路由转发
+        locator:
+          enabled: true  #开启微服务名称自动转发
+          lower-case-service-id: true  #微服务名称以小写形式呈现
+
+    #RequestRateLimiter :使用限流过滤器，是springcloud gateway提供的
+    # 参数：replenishRate ：向令牌桶中填充的速率
+    #      burstCapacity ： 令牌桶的容量
+
+#eureka注册中心
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:7001/eureka
+  instance:
+    prefer-ip-address: true
